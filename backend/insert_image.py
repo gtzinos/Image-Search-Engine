@@ -4,6 +4,7 @@ from libs.image_calculations.features import get_features
 from flask import jsonify
 from libs.constants.http_codes import HttpCodes
 
+
 app = Flask(__name__)
 app.Debug = True
 
