@@ -10,8 +10,12 @@ import os
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
 app.Debug = True
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.after_request
 def after_request(response):
@@ -30,8 +34,9 @@ def upload():
                 mimetype='application/json')
 
     for file in request.files.getlist('file'):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
     return Response(json.dumps({"message": "done"}),
                     status=HttpCodes.HTTP_OK_BASIC,
