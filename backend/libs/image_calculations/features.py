@@ -3,6 +3,7 @@ import imutils
 
 def get_features(imageDirectory):
     image=cv2.imread(imageDirectory)
+
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     histogram = cv2.calcHist([hsv], [0, 1, 2], None, (8,8,8),
