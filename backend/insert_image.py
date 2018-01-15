@@ -1,7 +1,8 @@
-from flask import Flask, json
+from flask import Flask, Response, request, json
 from flask import request
 from libs.image_calculations.features import get_features
 from flask import jsonify
+from libs.constants.http_codes import HttpCodes
 
 app = Flask(__name__)
 app.Debug = True
@@ -15,7 +16,9 @@ def after_request(response):
 
 @app.route("/upload", methods=['POST'])
 def upload():
-    return json.dumps([{"a": 1}])
+    return Response(json.dumps({"message": "done"}),
+                    status=HttpCodes.HTTP_OK_BASIC,
+                    mimetype='application/json')
 
 
 if __name__ == "__main__":
