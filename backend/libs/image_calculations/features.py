@@ -1,20 +1,31 @@
 import cv2
 import imutils
+import numpy as np
 
 def get_features(imageDirectory):
     image=cv2.imread(imageDirectory)
 
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    histogram = cv2.calcHist([hsv], [0, 1, 2], None, (8,8,8),
-		[0, 180, 0, 256, 0, 256])
+    # check to see if we are using OpenCV 3.X
+    if imutils.is_cv3():
+        # detect and extract features from the image
+        descriptor = cv2.xfeatures2d.SIFT_create()
+        (kps, features) = descriptor.detectAndCompute(gray, None)
 
-    # handle normalizing the histogram if we are using OpenCV 2.4.X
-    if imutils.is_cv2():
-        histogram = cv2.normalize(histogram)
-    # otherwise, perform "in place" normalization in OpenCV 3 (I
-    # personally hate the way this is done
+    # otherwise, we are using OpenCV 2.4.X
     else:
-        cv2.normalize(histogram, histogram)
+        # detect keypoints in the image
+        detector = cv2.FeatureDetector_create("SIFT")
+        kps = detector.detect(gray)
 
-    return histogram.flatten()
+        # extract features from the image
+        extractor = cv2.DescriptorExtractor_create("SIFT")
+        (kps, features) = extractor.compute(gray, kps)
+
+    # convert the keypoints from KeyPoint objects to NumPy
+    # arrays
+    kps = np.float32([kp.pt for kp in kps])
+
+    # return a tuple of keypoints and features
+    return (kps, features)

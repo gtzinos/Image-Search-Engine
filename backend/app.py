@@ -4,9 +4,11 @@ from libs.image_calculations.features import get_features
 from flask import jsonify
 from libs.constants.http_codes import HttpCodes
 from werkzeug.utils import secure_filename
-import os
+import os, sys
 from libs.image_calculations.size import convert_image
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import exc
+
 
 app = Flask(__name__)
 
@@ -49,6 +51,7 @@ def upload():
         return Response(json.dumps({"message": "No file part"}),
                 status = HttpCodes.HTTP_BAD_REQUEST,
                 mimetype='application/json')
+    
     db.create_all()
     db.session.commit()
 
@@ -59,22 +62,29 @@ def upload():
 
             image = convert_image(file, 30, 30)
 
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            try:
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-            path = "./uploads/2.jpg"
-            vector = get_features(path).tolist()
+                image.save(path)
 
-            image = Picture(vector, path)
+                (kp, features) = get_features(path)
 
+                image = Picture(features.tolist(), path)
 
-            db.session.add(image)
-            db.session.commit()
-
-    # Check that email does not already exist (not a great query, but works)
-    # if not db.session.query(User).filter(User.email == email).count():
-    #    reg = User(email)
-    #   db.session.add(reg)
-    #   db.session.commit()
+                try:
+                    db.session.add(image)
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+                    e = sys.exc_info()[0]
+                    return Response(json.dumps({"message": str(e)}),
+                        status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                        mimetype = 'application/json')
+            except:
+                e = sys.exc_info()[0]
+                return Response(json.dumps({"message": str(e)}),
+                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                    mimetype = 'application/json') 
 
     return Response(json.dumps({"message": "done"}),
         status = HttpCodes.HTTP_OK_BASIC,
