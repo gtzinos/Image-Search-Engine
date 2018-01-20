@@ -43,6 +43,53 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
     return response
 
+@app.route("/search", methods=['POST'])
+def search():
+
+    if len(request.files) == 0:
+        return Response(json.dumps({"message": "No file part"}),
+                status = HttpCodes.HTTP_BAD_REQUEST,
+                mimetype='application/json')
+    
+    db.create_all()
+    db.session.commit()
+
+    for file in request.files.getlist('file'):
+        if file and allowed_file(file.filename):
+
+            filename = secure_filename(file.filename)
+
+            image = convert_image(file, 30, 30)
+
+            try:
+                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+                image.save(path)
+
+                (kp, features) = get_features(path)
+
+                image = Picture(features.tolist(), path)
+
+                try:
+                    data = db.session.execute("select * from pictures").fetchall()
+                    
+                except:
+                    db.session.rollback()
+                    e = sys.exc_info()[0]
+                    return Response(json.dumps({"message": str(e)}),
+                        status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                        mimetype = 'application/json')
+            except:
+                e = sys.exc_info()[0]
+                return Response(json.dumps({"message": str(e)}),
+                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                    mimetype = 'application/json') 
+
+    return Response(json.dumps({"message": "done"}),
+        status = HttpCodes.HTTP_OK_BASIC,
+        mimetype = 'application/json')
+
+
 @app.route("/upload", methods=['POST'])
 def upload():
      # check if the post request has the file part
