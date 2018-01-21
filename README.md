@@ -2,11 +2,13 @@
 Image search engine in python.
 
 **Technologies:
+
 Angular 5
 Python 3
 Postgresql 10
 
 **Enable Cube
+
 CREATE EXTENSION cube;
 
 **Install POSTGIS
