@@ -1,11 +1,31 @@
-<p-fileUpload name="file" url="http://localhost:5000/search" multiple="multiple"
-accept="image/*" maxFileSize="1000000" (onUpload)="uploaded($event)" (onError)="error($event)"></p-fileUpload>
+<div class="form">
+    <div>
+        <mat-form-field>
+            <mat-select [(ngModel)]="selectedMetric" placeholder="Distance Metric">
+                <mat-option *ngFor="let metric of metrics" [value]="metric.id">
+                    {{ metric.title }}
+                </mat-option>
+            </mat-select>
+        </mat-form-field>
+    </div>
 
-<div class="results" *ngIf="images && images.length > 0">
-    <h3>Results:</h3>
-    
-    <div class="result-item" *ngFor="let image of images">
-        <img [src]="image.url" class="image"/>
-        <div>Distance: {{image.distance}}</div>
+    <div>
+        <mat-form-field>
+            <input matInput [(ngModel)]="selectedNumber" placeholder="Number of results" type="number" value="1">
+        </mat-form-field>
+    </div>
+
+    <div>
+        <p-fileUpload name="file" url="http://localhost:5000/search" multiple="true" accept="image/*" maxFileSize="10000000" (onBeforeUpload)="onBeforeUpload($event)"
+            (onUpload)="uploaded($event)" (onError)="error($event)"></p-fileUpload>
+    </div>
+
+    <div class="results" *ngIf="images && images.length > 0">
+        <h3>Results:</h3>
+
+        <div class="result-item" *ngFor="let image of images">
+            <img [src]="image.url" class="image" />
+            <div>Distance: {{image.distance}}</div>
+        </div>
     </div>
 </div>

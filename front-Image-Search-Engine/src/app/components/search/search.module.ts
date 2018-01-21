@@ -4,14 +4,16 @@ import { RouterModule } from '@angular/router';
 import { FileUploadModule } from 'primeng/primeng';
 import { MatSnackBarModule } from '@angular/material';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import {MatSelectModule} from '@angular/material/select';
+import {MatInputModule} from '@angular/material/input';
 
 @NgModule({
   declarations: [
     SearchComponent
   ],
   imports: [
-    FileUploadModule,MatSnackBarModule,CommonModule,FormsModule,
+    FileUploadModule,MatInputModule,MatSelectModule,MatSnackBarModule,ReactiveFormsModule,CommonModule,FormsModule,
     RouterModule.forChild([{path: '', component: SearchComponent}])
   ],
   providers: [],
