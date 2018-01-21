@@ -1,8 +1,11 @@
 <p-fileUpload name="file" url="http://localhost:5000/search" multiple="multiple"
 accept="image/*" maxFileSize="1000000" (onUpload)="uploaded($event)" (onError)="error($event)"></p-fileUpload>
 
-<div class="results">
-    <div *ngFor="let image of images">
+<div class="results" *ngIf="images && images.length > 0">
+    <h3>Results:</h3>
+    
+    <div class="result-item" *ngFor="let image of images">
         <img [src]="image.url" class="image"/>
+        <div>Distance: {{image.distance}}</div>
     </div>
 </div>
