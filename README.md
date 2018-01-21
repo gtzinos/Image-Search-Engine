@@ -1,11 +1,14 @@
 # Image-Search-Engine
 Image search engine in python.
 
-**Technologies:
+**Technologies:**
 
 Angular 5
+
 Python 3
+
 Postgresql 10
+
 
 **Enable Cube
 
