@@ -7,10 +7,16 @@ import { MatSnackBar } from '@angular/material';
   styleUrls: ['./search.component.css']
 })
 export class SearchComponent {
+  images = [];
 
   constructor(public snackBar: MatSnackBar) { }
 
   uploaded(event) {
+
+    this.images = JSON.parse(event.xhr.responseText).message;
+
+    console.log(this.images);
+
     this.snackBar.open("File uploaded", "Great!", {
       duration: 4000,
     });
