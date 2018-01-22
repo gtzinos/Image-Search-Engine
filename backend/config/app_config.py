@@ -1,6 +1,15 @@
 class AppConfig:
 
+    #Image configurations
+
     public_image_url = "http://localhost/"
+
+    public_upload_folder = "/var/www/html/ex"
+
+    max_image_length = 16 * 1024 * 1024
+
+
+    #Database configurations
 
     database_host = "localhost"
 
