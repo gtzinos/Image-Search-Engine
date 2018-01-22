@@ -1,28 +1,26 @@
-from flask import Flask, Response, request, json
-from flask import request
-from libs.image_calculations.features import get_features
-from flask import jsonify
-from libs.constants.http_codes import HttpCodes
-from werkzeug.utils import secure_filename
-import os, sys
-from libs.image_calculations.size import convert_image
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc
+import os
+import sys
 
+from flask import Flask, Response, json, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import text
+
+from werkzeug.utils import secure_filename
+from config.app_config import AppConfig
+
+from utils.constants.http_codes import HttpCodes
+from utils.image_calculations.features import get_features
+from utils.image_calculations.size import convert_image
 
 app = Flask(__name__)
-
-app.config['UPLOAD_FOLDER'] = './uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-
+app.config['UPLOAD_FOLDER'] = str(AppConfig.public_upload_folder)
+app.config['MAX_CONTENT_LENGTH'] = AppConfig.max_image_length
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:1994gt31@localhost:5432/image_search_engine'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://' + str(AppConfig.database_user) + ':' + str(AppConfig.database_password) + '@' + str(AppConfig.database_host) + ':' + str(AppConfig.database_port) + "/" + str(AppConfig.database_name)
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'svg'])
-app.Debug = True
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 
-#db = sqlalchemy.create_engine('postgresql://postgres:1994gt31@localhost:5432/image_search_engine')  
-#engine = db.connect()  
+app.Debug = True 
 
 # initialize the database connection
 db = SQLAlchemy(app)
@@ -32,10 +30,16 @@ db = SQLAlchemy(app)
 
 from Picture import *
 
+#Init datab
+db.create_all()
+db.session.commit()
+
+#Allowed image types
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+#Enable cross-origin requests
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -43,6 +47,7 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
     return response
 
+#Search image similarity rest api
 @app.route("/search", methods=['POST'])
 def search():
 
@@ -50,46 +55,75 @@ def search():
         return Response(json.dumps({"message": "No file part"}),
                 status = HttpCodes.HTTP_BAD_REQUEST,
                 mimetype='application/json')
-    
-    db.create_all()
-    db.session.commit()
+    #Distance metric
+    selectedMetric = request.form.get('selectedMetric')
+    #KNN Number
+    selectedNumber = request.form.get('selectedNumber')
 
     for file in request.files.getlist('file'):
+        
         if file and allowed_file(file.filename):
 
+            #Filter image name
             filename = secure_filename(file.filename)
 
-            image = convert_image(file, 30, 30)
+            #Build path
+            path = os.path.join("./", filename)
 
             try:
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
+                #Resize image
+                image = convert_image(file, 200, 200)
+                
+                #Store image
                 image.save(path)
 
+                #Get descriptor vector
                 (kp, features) = get_features(path)
 
-                image = Picture(features.tolist(), path)
+                #Delete file
+                os.remove(path)
+                
+                #Define distance metric operator
+                metric = "<->"
+                if selectedMetric == 1:
+                    metric = "<#>"
+                elif selectedMetric == 2:
+                    metric = "<=>"
 
-                try:
-                    data = db.session.execute("select * from pictures").fetchall()
-                    
-                except:
-                    db.session.rollback()
-                    e = sys.exc_info()[0]
-                    return Response(json.dumps({"message": str(e)}),
-                        status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                        mimetype = 'application/json')
+                #Get common images
+                command = text("select cube(vector) " + str(metric) + " cube(:vector2) as distance, path from pictures order by distance limit " + str(selectedNumber))
+                
+                #Execute command
+                data = db.engine.execute(command, vector2=features.tolist()).fetchall()
+                
+                #Calculate response
+                images = []
+                for (distance, path) in data:
+                    images.append({"distance": distance, "url": os.path.join(AppConfig.public_image_url, path)})
+
+                return Response(json.dumps({"message": images}),
+                    status = HttpCodes.HTTP_OK_BASIC,
+                    mimetype = 'application/json')
+            
             except:
+                os.remove(path)
                 e = sys.exc_info()[0]
                 return Response(json.dumps({"message": str(e)}),
-                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                    mimetype = 'application/json') 
+                status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                mimetype = 'application/json') 
+
+        else:
+            return Response(json.dumps({"message": "No file part"}),
+                status = HttpCodes.HTTP_BAD_REQUEST,
+                mimetype='application/json')
+            
 
     return Response(json.dumps({"message": "done"}),
         status = HttpCodes.HTTP_OK_BASIC,
         mimetype = 'application/json')
 
 
+#Insert new image in database rest api
 @app.route("/upload", methods=['POST'])
 def upload():
      # check if the post request has the file part
@@ -99,40 +133,48 @@ def upload():
                 status = HttpCodes.HTTP_BAD_REQUEST,
                 mimetype='application/json')
     
-    db.create_all()
-    db.session.commit()
-
+    
     for file in request.files.getlist('file'):
         if file and allowed_file(file.filename):
 
+            #Filter image name
             filename = secure_filename(file.filename)
 
-            image = convert_image(file, 30, 30)
+            #Build path
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
             try:
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
+                #Resize image
+                image = convert_image(file, 200, 200)
+                
+                #Store image
                 image.save(path)
 
+                #Get descriptor vector
                 (kp, features) = get_features(path)
 
-                image = Picture(features.tolist(), path)
+                #Create image instance
+                image = Picture(features.tolist(), filename)   
 
+                #Insert image in database
                 try:
                     db.session.add(image)
                     db.session.commit()
                 except:
                     db.session.rollback()
+                    os.remove(path)
                     e = sys.exc_info()[0]
                     return Response(json.dumps({"message": str(e)}),
-                        status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                        mimetype = 'application/json')
-            except:
-                e = sys.exc_info()[0]
-                return Response(json.dumps({"message": str(e)}),
                     status = HttpCodes.HTTP_BAD_FORBIDDEN,
                     mimetype = 'application/json') 
 
+            except:
+                os.remove(path)
+                e = sys.exc_info()[0]
+                return Response(json.dumps({"message": str(e)}),
+                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                    mimetype = 'application/json')   
+                    
     return Response(json.dumps({"message": "done"}),
         status = HttpCodes.HTTP_OK_BASIC,
         mimetype = 'application/json')
