@@ -4,8 +4,10 @@
 }
 
 .result-item {
-    width: 150px;
+    width: auto;
     text-align: center;
+    margin: 5px;
+    display: inline-block;
 }
 
 .form { 

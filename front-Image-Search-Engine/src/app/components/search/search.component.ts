@@ -15,12 +15,14 @@ export class SearchComponent {
 
   constructor(public snackBar: MatSnackBar) { }
 
-  onBeforeUpload(event) {
-    if(!event.formData) {
+  beforeUpload(event) {
+    console.log(event);
+    if(!event.xhr) {
       event.formData = {};
     }
-    event.formData.selectedMetric = this.selectedMetric;
-    event.formData.selectedNumber = this.selectedNumber;
+
+    event.formData.set("selectedMetric",this.selectedMetric);
+    event.formData.set("selectedNumber", this.selectedNumber);
   }
 
   uploaded(event) {
