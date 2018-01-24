@@ -12,6 +12,7 @@ export class SearchComponent {
 
   selectedMetric = this.metrics[0].id;
   selectedNumber = 1;
+  searchAllFeatures = true;
 
   constructor(public snackBar: MatSnackBar) { }
 
@@ -23,6 +24,7 @@ export class SearchComponent {
 
     event.formData.set("selectedMetric",this.selectedMetric);
     event.formData.set("selectedNumber", this.selectedNumber);
+    event.formData.set("searchAllFeatures", this.searchAllFeatures);
   }
 
   uploaded(event) {

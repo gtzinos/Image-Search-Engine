@@ -59,6 +59,8 @@ def search():
     selectedMetric = request.form.get('selectedMetric')
     #KNN Number
     selectedNumber = request.form.get('selectedNumber')
+    #Search in all features array
+    searchAllFeatures = request.form.get('searchAllFeatures')
 
     for file in request.files.getlist('file'):
         
@@ -70,47 +72,48 @@ def search():
             #Build path
             path = os.path.join("./", filename)
 
-            try:
-                #Resize image
-                image = convert_image(file, 200, 200)
-                
-                #Store image
-                image.save(path)
-
-                #Get descriptor vector
-                (kp, features) = get_features(path)
-
-                #Delete file
-                #os.remove(path)
-                
-                #Define distance metric operator
-                metric = "<->"
-                if selectedMetric == 1:
-                    metric = "<#>"
-                elif selectedMetric == 2:
-                    metric = "<=>"
-
-                #Get common images
-                command = text("select cube(vector) " + str(metric) + " cube(:vector2) as distance, path from pictures order by distance limit " + str(selectedNumber))
-                
-                #Execute command
-                data = db.engine.execute(command, vector2=features.tolist()).fetchall()
-                
-                #Calculate response
-                images = []
-                for (distance, path) in data:
-                    images.append({"distance": distance, "url": os.path.join(AppConfig.public_image_url, path)})
-
-                return Response(json.dumps({"message": images}),
-                    status = HttpCodes.HTTP_OK_BASIC,
-                    mimetype = 'application/json')
+        
+            #Resize image
+            image = convert_image(file, 200, 200)
             
-            except:
-                os.remove(path)
-                e = sys.exc_info()[0]
-                return Response(json.dumps({"message": str(e)}),
-                status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                mimetype = 'application/json') 
+            #Store image
+            image.save(path)
+
+            #Get descriptor vector
+            (kp, features) = get_features(path)
+
+            #Delete file
+            #os.remove(path)
+            
+            #Define distance metric operator
+            metric = "<->"
+            if selectedMetric == 1:
+                metric = "<#>"
+            elif selectedMetric == 2:
+                metric = "<=>"
+
+            featuresToSearch = features.tolist()
+            featuresFieldName = "features"
+            if searchAllFeatures == "false":
+                featuresToSearch = cut_dimensions(features).tolist()
+                featuresFieldName = "cut_features"
+
+            #Get common images
+            command = text("select cube(" + str(featuresFieldName) + ") " + str(metric) + " cube(:vector2) as distance, filename from pictures order by distance limit " + str(selectedNumber))
+            
+            #Execute command            
+            data = db.engine.execute(command, vector2=featuresToSearch).fetchall()
+
+            #Calculate response
+            images = []
+            for (distance, filename) in data:
+                images.append({"distance": distance, "url": os.path.join(AppConfig.public_image_url, filename)})
+
+            return Response(json.dumps({"message": images}),
+                status = HttpCodes.HTTP_OK_BASIC,
+                mimetype = 'application/json')
+            
+            
 
         else:
             return Response(json.dumps({"message": "No file part"}),

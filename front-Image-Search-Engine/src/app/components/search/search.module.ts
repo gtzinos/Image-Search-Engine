@@ -7,13 +7,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {MatSelectModule} from '@angular/material/select';
 import {MatInputModule} from '@angular/material/input';
-
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 @NgModule({
   declarations: [
     SearchComponent
   ],
   imports: [
-    FileUploadModule,MatInputModule,MatSelectModule,MatSnackBarModule,ReactiveFormsModule,CommonModule,FormsModule,
+    FileUploadModule,MatInputModule,MatSlideToggleModule,MatSelectModule,MatSnackBarModule,ReactiveFormsModule,CommonModule,FormsModule,
     RouterModule.forChild([{path: '', component: SearchComponent}])
   ],
   providers: [],

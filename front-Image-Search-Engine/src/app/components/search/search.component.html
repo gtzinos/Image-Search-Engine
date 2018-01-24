@@ -16,6 +16,10 @@
     </div>
 
     <div>
+        <mat-slide-toggle [(ngModel)]="searchAllFeatures">Search in all features</mat-slide-toggle>
+    </div>
+
+    <div>
         <p-fileUpload name="file" url="http://localhost:5000/search" multiple="true" accept="image/*" maxFileSize="10000000" 
             (onBeforeUpload)="beforeUpload($event)" (onUpload)="uploaded($event)" (onError)="error($event)"></p-fileUpload>
     </div>
