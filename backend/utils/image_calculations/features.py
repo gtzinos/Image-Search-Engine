@@ -43,17 +43,17 @@ def cut_dimensions(dim_array):
               
         mean.append([index, sum / counter])
     
-    #Sort values
-    mean.sort(key=lambda x: x[1], reverse=True)
+    #Sort values (smaller first)
+    mean.sort(key=lambda x: x[1], reverse=False)
 
     #Get mean length
-    mean_length = len(mean)
+    mean_length = len(mean) // 2
 
+    #Store what will delete
     mean = mean[0:mean_length]
 
+    #Map values and remove mean
     mean = [index for index, number in enumerate(mean)]
 
+    #Delete all in mean array
     return np.delete(dim_array, mean)
-    #dim_array = result = [number for index, number in enumerate(dim_array) if index in mean]
-
-    #return dim_array
