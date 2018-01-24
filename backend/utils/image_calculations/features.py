@@ -29,3 +29,31 @@ def get_features(imageDirectory):
 
     # return a tuple of keypoints and features
     return (kps, features)
+
+def cut_dimensions(dim_array):
+    counter = 0
+    sum = 0
+    mean = []
+    
+    #Calculate mean
+    for index, row in enumerate(dim_array): 
+        for number in row:
+            sum += number
+            counter += 1
+              
+        mean.append([index, sum / counter])
+    
+    #Sort values
+    mean.sort(key=lambda x: x[1], reverse=True)
+
+    #Get mean length
+    mean_length = len(mean)
+
+    mean = mean[0:mean_length]
+
+    mean = [index for index, number in enumerate(mean)]
+
+    return np.delete(dim_array, mean)
+    #dim_array = result = [number for index, number in enumerate(dim_array) if index in mean]
+
+    #return dim_array
