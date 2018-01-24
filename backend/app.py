@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from config.app_config import AppConfig
 
 from utils.constants.http_codes import HttpCodes
-from utils.image_calculations.features import get_features
+from utils.image_calculations.features import get_features, cut_dimensions
 from utils.image_calculations.size import convert_image
 
 app = Flask(__name__)
@@ -81,7 +81,7 @@ def search():
                 (kp, features) = get_features(path)
 
                 #Delete file
-                os.remove(path)
+                #os.remove(path)
                 
                 #Define distance metric operator
                 metric = "<->"
@@ -127,7 +127,6 @@ def search():
 @app.route("/upload", methods=['POST'])
 def upload():
      # check if the post request has the file part
-    print(request.files)
     if len(request.files) == 0:
         return Response(json.dumps({"message": "No file part"}),
                 status = HttpCodes.HTTP_BAD_REQUEST,
@@ -143,37 +142,29 @@ def upload():
             #Build path
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-            try:
-                #Resize image
-                image = convert_image(file, 200, 200)
-                
-                #Store image
-                image.save(path)
+            
+            #Resize image
+            image = convert_image(file, 200, 200)
+            
+            #Store image
+            image.save(path)
 
-                #Get descriptor vector
-                (kp, features) = get_features(path)
+            #Get descriptor vector
+            (kp, features) = get_features(path)
+            
+            #Cut dimensions of kp
+            kp_cut = cut_dimensions(kp)
 
-                #Create image instance
-                image = Picture(features.tolist(), filename)   
+            #Cut dimensions of features
+            features_cut = cut_dimensions(features)
 
-                #Insert image in database
-                try:
-                    db.session.add(image)
-                    db.session.commit()
-                except:
-                    db.session.rollback()
-                    os.remove(path)
-                    e = sys.exc_info()[0]
-                    return Response(json.dumps({"message": str(e)}),
-                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                    mimetype = 'application/json') 
+            #Create image instance
+            image = Picture(kp.tolist(), features.tolist(), kp_cut.tolist(), features_cut.tolist(), filename)   
 
-            except:
-                os.remove(path)
-                e = sys.exc_info()[0]
-                return Response(json.dumps({"message": str(e)}),
-                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
-                    mimetype = 'application/json')   
+            #Insert image in database
+            db.session.add(image)
+            db.session.commit()
+
                     
     return Response(json.dumps({"message": "done"}),
         status = HttpCodes.HTTP_OK_BASIC,
