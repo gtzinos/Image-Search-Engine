@@ -124,8 +124,6 @@ def search():
             return Response(json.dumps({"message": images}),
                 status = HttpCodes.HTTP_OK_BASIC,
                 mimetype = 'application/json')
-            
-            
 
         else:
             return Response(json.dumps({"message": "No file part"}),
