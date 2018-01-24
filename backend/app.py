@@ -61,6 +61,8 @@ def search():
     selectedNumber = request.form.get('selectedNumber')
     #Search in all features array
     searchAllFeatures = request.form.get('searchAllFeatures')
+    #Init images array (Response)
+    images = []
 
     for file in request.files.getlist('file'):
         
@@ -72,42 +74,52 @@ def search():
             #Build path
             path = os.path.join("./", filename)
 
-        
-            #Resize image
-            image = convert_image(file, 200, 200)
-            
-            #Store image
-            image.save(path)
+            try:
+                #Resize image
+                image = convert_image(file, 200, 200)
+                
+                #Store image
+                image.save(path)
 
-            #Get descriptor vector
-            (kp, features) = get_features(path)
+                #Get descriptor vector
+                (kp, features) = get_features(path)
 
-            #Delete file
-            #os.remove(path)
-            
-            #Define distance metric operator
-            metric = "<->"
-            if selectedMetric == 1:
-                metric = "<#>"
-            elif selectedMetric == 2:
-                metric = "<=>"
+                #Delete file
+                if os.path.exists(path):
+                    os.remove(path)
+                
+                #Define distance metric operator
+                metric = "<->"
+                if selectedMetric == 1:
+                    metric = "<#>"
+                elif selectedMetric == 2:
+                    metric = "<=>"
 
-            featuresToSearch = features.tolist()
-            featuresFieldName = "features"
-            if searchAllFeatures == "false":
-                featuresToSearch = cut_dimensions(features).tolist()
-                featuresFieldName = "cut_features"
+                featuresToSearch = features.tolist()
+                featuresFieldName = "features"
+                if searchAllFeatures == "false":
+                    featuresToSearch = cut_dimensions(features).tolist()
+                    featuresFieldName = "cut_features"
 
-            #Get common images
-            command = text("select cube(" + str(featuresFieldName) + ") " + str(metric) + " cube(:vector2) as distance, filename from pictures order by distance limit " + str(selectedNumber))
-            
-            #Execute command            
-            data = db.engine.execute(command, vector2=featuresToSearch).fetchall()
+                #Get common images
+                command = text("select cube(" + str(featuresFieldName) + ") " + str(metric) + " cube(:vector2) as distance, filename from pictures order by distance limit " + str(selectedNumber))
+                
+                #Execute command            
+                data = db.engine.execute(command, vector2=featuresToSearch).fetchall()
 
-            #Calculate response
-            images = []
-            for (distance, filename) in data:
-                images.append({"distance": distance, "url": os.path.join(AppConfig.public_image_url, filename)})
+                #Calculate response
+                for (distance, filename) in data:
+                    images.append({"distance": distance, "url": os.path.join(AppConfig.public_image_url, filename)})
+
+            except:
+                #Delete file
+                if os.path.exists(path):
+                    os.remove(path)
+
+                e = sys.exc_info()[0]
+                return Response(json.dumps({"message": str(e)}),
+                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                    mimetype = 'application/json') 
 
             return Response(json.dumps({"message": images}),
                 status = HttpCodes.HTTP_OK_BASIC,
@@ -138,35 +150,57 @@ def upload():
     
     for file in request.files.getlist('file'):
         if file and allowed_file(file.filename):
-
+            
             #Filter image name
             filename = secure_filename(file.filename)
 
             #Build path
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-            
-            #Resize image
-            image = convert_image(file, 200, 200)
-            
-            #Store image
-            image.save(path)
+            try:
+                #Resize image
+                image = convert_image(file, 200, 200)
+                
+                #Store image
+                image.save(path)
 
-            #Get descriptor vector
-            (kp, features) = get_features(path)
-            
-            #Cut dimensions of kp
-            kp_cut = cut_dimensions(kp)
+                #Get descriptor vector
+                (kp, features) = get_features(path)
+                
+                #Cut dimensions of kp
+                kp_cut = cut_dimensions(kp)
 
-            #Cut dimensions of features
-            features_cut = cut_dimensions(features)
+                #Cut dimensions of features
+                features_cut = cut_dimensions(features)
 
-            #Create image instance
-            image = Picture(kp.tolist(), features.tolist(), kp_cut.tolist(), features_cut.tolist(), filename)   
+                #Create image instance
+                image = Picture(kp.tolist(), features.tolist(), kp_cut.tolist(), features_cut.tolist(), filename)   
 
-            #Insert image in database
-            db.session.add(image)
-            db.session.commit()
+                try:
+                    #Insert image in database
+                    db.session.add(image)
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+
+                    #Delete file
+                    if os.path.exists(path):
+                        os.remove(path)
+
+                    e = sys.exc_info()[0]
+                    return Response(json.dumps({"message": str(e)}),
+                        status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                        mimetype = 'application/json')
+
+            except:
+                #Delete file
+                if os.path.exists(path):
+                    os.remove(path)
+
+                e = sys.exc_info()[0]
+                return Response(json.dumps({"message": str(e)}),
+                    status = HttpCodes.HTTP_BAD_FORBIDDEN,
+                    mimetype = 'application/json') 
 
                     
     return Response(json.dumps({"message": "done"}),
